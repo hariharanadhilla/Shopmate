@@ -46,7 +46,7 @@ const sendVerificationEmail = async (email, name, token) => {
         console.log("Sending verification mail to:", email);
 
         const verificationLink =
-            `http://localhost:3001/api/users/verify-email/${token}`;
+            `${SERVER_URL}/api/users/verify-email/${token}`;
 
         const info = await transporter.sendMail({
             from: `"ShopMate" <${process.env.MAIL_USERNAME}>`,

@@ -101,6 +101,11 @@ const generateRefreshToken = (user) => {
 const loginUser = async (req, res) => {
     try {
         const {email, password} = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Email and password are required.' });
+        }
+
         const db = getDB();
 
         const user = await db.collection('users').findOne({
@@ -129,7 +134,7 @@ const loginUser = async (req, res) => {
         );
 
         res.status(200).json({
-            message: "Login succesful",
+            message: "Login successful",
             accessToken,
             refreshToken,
             user: {
@@ -184,27 +189,54 @@ const refreshUserToken = async (req, res) => {
     }
 }
 
-const sendPasswordResetOTP=async(req,res)=>{
+const sendPasswordResetOTP = async (req, res) => {
     try {
-        const {email}=req.body;
-        if(!email){
-            return res.status(400).json({message:"Email is required"})
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ message: 'Email is required.' });
         }
-        const db=getDB();
-        const userCollection=db.collection('useres');
+        const db = getDB();
+        const usersCollection = db.collection('users');
 
-        const normalizedEmail=email.toLowerCase();
-        const user=await userCollection.findOne({email:normalizedEmail});
-        if(!user){
-            return res.status(404).json({message:"No account found for this email."});
+        const normalizedEmail = email.toLowerCase();
+        const user = await usersCollection.findOne({ email: normalizedEmail });
+
+        if (!user) {
+            return res.status(404).json({ message: 'No account found for this email.' });
         }
-        
-        
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpHash = await bcrypt.hash(otp, 10);
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
+        console.log(`Forget passwords requested for ${normalizedEmail}. Generated OTP: ${otp}`);
+
+        await usersCollection.updateOne(
+            {_id: user._id },
+            {
+                $set: {
+                    reset_password_otp_hash: otpHash,
+                    reset_password_otp_expire_at: expiresAt,
+                    updated_at: new Date(),
+                },
+            }
+        );
+        const emailResult = await sendEmail({
+            to: normalizedEmail,
+            subject: 'ShopMATE password Reset OTP',
+            text: `Your password reset OTP is: ${otp}. It expires in 15 minutes.`,
+            html: `<p>Your password reset OTP is:</p><h2>${otp}</h2><p>This code expires in 15 minutes.</p>`,
+        });
+        console.log(`Forget password email sent:`,emailResult && emailResult.response);
+
+        return res.status(200).json({ message: 'OTP sent to your email address. '});
+    }catch (error) {
+        console.error('Forget password error:',error);
+        return res.status(500).json({ message: 'Could not send OTP.' ,error:error.message })
     }
-}
+};
 
 module.exports = {
+    sendPasswordResetOTP,
     registerUser,
     generateAccessToken,
     generateRefreshToken,
