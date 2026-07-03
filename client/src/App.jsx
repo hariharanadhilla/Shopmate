@@ -36,7 +36,6 @@
 
 // export default App;
 
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
@@ -53,12 +52,13 @@ import ShopMateChatbot from './components/ShopMateChatbot';
 import Logout from './pages/Logout';
 import Registerpage from './pages/Registerpage';
 import Loginpage from './pages/Loginpage';
+import ForgetPasswordpage from './pages/ForgetPasswordpage';
 
 
 // Wraps layout so we can use useLocation inside Router
 function AppLayout() {
     const location = useLocation();
-    const hideNav = location.pathname === '/login' || location.pathname === '/register' 
+    const hideNav = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/forgetPassword'
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>

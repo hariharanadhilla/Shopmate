@@ -15,10 +15,10 @@ const verifyEmail = async (req, res) => {
                 }
             }
         );
-        res.redirect(`${SERVER_UR}/login?verified=true`);
+        res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?verified=true`);
     } catch (err) {
         console.error(err);
-        res.redirect(`${SERVER_UR}/login?verified=false`);
+        res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?verified=false`);
     }
 };
 

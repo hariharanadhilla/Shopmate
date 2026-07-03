@@ -70,7 +70,7 @@ const Loginpage = () => {
           <div style={styles.field}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label style={styles.label}>Password</label>
-              
+
             </div>
             <input
               type="password"
@@ -81,6 +81,11 @@ const Loginpage = () => {
               placeholder="••••••••"
               style={styles.input}
             />
+          </div>
+          <div style={styles.forgetPasssword}>
+            <Link to="/forgetPassword" style={styles.link}>
+              Forgot Password
+            </Link>
           </div>
 
           <button type="submit" disabled={loading} style={styles.button}>

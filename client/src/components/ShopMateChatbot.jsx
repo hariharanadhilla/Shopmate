@@ -16,7 +16,7 @@ const ShopMateChatbot=()=> {
             historyRef.current.push({ role: 'user', content: userQuestion });
 
             const response = await api.post('/ai/agent', {
-                question: userQuestion,
+                message: userQuestion,
                 history: historyRef.current // Send full history
             });
 

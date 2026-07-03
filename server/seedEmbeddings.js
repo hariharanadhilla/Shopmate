@@ -22,6 +22,31 @@ async function main() {
 
     const ai = new GoogleGenAI({ apiKey: geminiApiKey });
     const pinecone = new Pinecone({ apiKey: pineconeApiKey });
+
+    // Auto-create the Pinecone index if it doesn't exist
+    const existingIndexes = await pinecone.listIndexes();
+    const indexNames = (existingIndexes.indexes || []).map(i => i.name);
+    if (!indexNames.includes(pineconeIndex)) {
+        console.log(`Index "${pineconeIndex}" not found. Creating it...`);
+        await pinecone.createIndex({
+            name: pineconeIndex,
+            dimension: 3072,       // gemini-embedding-001 output dimension
+            metric: "cosine",
+            spec: {
+                serverless: {
+                    cloud: "aws",
+                    region: "us-east-1"
+                }
+            }
+        });
+        // Wait for index to be ready
+        console.log("Waiting for index to initialize...");
+        await new Promise(resolve => setTimeout(resolve, 60000));
+        console.log(`Index "${pineconeIndex}" created successfully.`);
+    } else {
+        console.log(`Index "${pineconeIndex}" already exists. Proceeding...`);
+    }
+
     const index = pinecone.index(pineconeIndex);
 
     // Get all the products from mongodb

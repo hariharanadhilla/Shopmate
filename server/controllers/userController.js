@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 
-const {getDB} = require('../config/db');
+const {getDB} = require('../config//db');
 const jwt = require('jsonwebtoken');
 
 const {sendVerificationEmail,sendEmail} = require('../services/sendermail');
@@ -43,26 +43,20 @@ const registerUser = async (req, res) => {
             password: hashedPassword,
             phone_number: phone_number || null, // Optional field
             role: role || 'user', // Default role is 'user'
-            isVerified: true, // Auto-verified for development (set to false in production)
+            isVerified: false, // Email verification status
             createdAt: new Date()
         };
         const result = await db.collection('users').insertOne(newUser);
+        const token =jwt.sign({
+            userId: result.insertedId,
+            email: normalizedEmail
+            },
+            process.env.JWT_SECRET,
+            {expiresIn: '1d'}
+       );
+       await sendVerificationEmail(normalizedEmail,username , token);
 
-        // Attempt to send verification email (non-blocking - won't crash registration if mail fails)
-        try {
-            const token = jwt.sign({
-                userId: result.insertedId,
-                email: normalizedEmail
-                },
-                process.env.JWT_VERIFY_SECRET || process.env.JWT_SECRET,
-                {expiresIn: process.env.JWT_VERIFY_EXPIRY || '1d'}
-           );
-           await sendVerificationEmail(normalizedEmail, username, token);
-        } catch (mailError) {
-            console.warn('⚠️  Verification email could not be sent:', mailError.message);
-        }
-
-        res.status(201).json({message: 'User registered successfully. You can now log in.', userId: result.insertedId});
+        res.status(201).json({message: 'User registered successfully. please check your email and verify your account ', userId: result.insertedId});
     }
     catch (error) {
         res.status(500).json({
@@ -81,8 +75,8 @@ const generateAccessToken = (user) => {
             email: user.email,
             role: user.role
         },
-        process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET,
-        {expiresIn: process.env.JWT_ACCESS_EXPIRY || "15m"}
+        process.env.JWT_SECRET || "access_secret_key",
+        {expiresIn: "15m"}
     );
 };
 
@@ -93,19 +87,14 @@ const generateRefreshToken = (user) => {
             email: user.email,
             role: user.role
         },
-        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-        {expiresIn: process.env.JWT_REFRESH_EXPIRY || "7d"}
+        process.env.JWT_REFRESH_SECRET || "refresh_secret_key",
+        {expiresIn: "7d"}
     );
 };
 
 const loginUser = async (req, res) => {
     try {
         const {email, password} = req.body;
-
-        if (!email || !password) {
-            return res.status(400).json({ message: 'Email and password are required.' });
-        }
-
         const db = getDB();
 
         const user = await db.collection('users').findOne({
@@ -134,12 +123,12 @@ const loginUser = async (req, res) => {
         );
 
         res.status(200).json({
-            message: "Login successful",
+            message: "Login succesful",
             accessToken,
             refreshToken,
             user: {
                 id: user._id,
-                name: user.username,
+                name: user.name,
                 email: user.email,
                 role: user.role
             }
@@ -160,7 +149,7 @@ const refreshUserToken = async (req, res) => {
         }
         let decoded;
         try {
-            decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+            decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || "refresh_secret_key");
         } catch (err) {
             return res.status(401).json({message: "Invalid refresh token"});
         }
@@ -193,54 +182,106 @@ const sendPasswordResetOTP = async (req, res) => {
     try {
         const { email } = req.body;
         if (!email) {
-            return res.status(400).json({ message: 'Email is required.' });
+            return res.status(400).json({ message: "Email is required" });
         }
         const db = getDB();
-        const usersCollection = db.collection('users');
-
+        const userCollections = db.collection('users');
         const normalizedEmail = email.toLowerCase();
-        const user = await usersCollection.findOne({ email: normalizedEmail });
-
+        const user = await userCollections.findOne({ email: normalizedEmail });
         if (!user) {
-            return res.status(404).json({ message: 'No account found for this email.' });
+            return res.status(404).json({ message: "No account found with this email" });
         }
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const otpHash = await bcrypt.hash(otp, 10);
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+        const otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
 
-        console.log(`Forget passwords requested for ${normalizedEmail}. Generated OTP: ${otp}`);
+        console.log(`Generated OTP for ${normalizedEmail}: ${otp} (expires at ${otpExpiry})`);
 
-        await usersCollection.updateOne(
-            {_id: user._id },
-            {
-                $set: {
-                    reset_password_otp_hash: otpHash,
-                    reset_password_otp_expire_at: expiresAt,
-                    updated_at: new Date(),
-                },
-            }
+        await userCollections.updateOne(
+            {_id: user._id},
+            {$set: {reset_password_otp_hash: otpHash,
+                  reset_password_otp_expires_at: otpExpiry,
+                updated_at: new Date()
+                }}
         );
-        const emailResult = await sendEmail({
-            to: normalizedEmail,
-            subject: 'ShopMATE password Reset OTP',
-            text: `Your password reset OTP is: ${otp}. It expires in 15 minutes.`,
-            html: `<p>Your password reset OTP is:</p><h2>${otp}</h2><p>This code expires in 15 minutes.</p>`,
-        });
-        console.log(`Forget password email sent:`,emailResult && emailResult.response);
+        const emailResult=await sendEmail(
+            {
+                to: normalizedEmail,
+                subject: "ShopMate Password Reset OTP",
+                text: `Your OTP for password reset is: ${otp}. It will expire in 15 minutes.`,
+                html: `<p>Your OTP for password reset is: <strong>${otp}</strong>. It will expire in 15 minutes.</p>`
+            }
+        )
+        console.log(`Email sent to ${normalizedEmail}: ${emailResult}`);
+        res.status(200).json({ message: "Password reset OTP sent to your email" });
 
-        return res.status(200).json({ message: 'OTP sent to your email address. '});
-    }catch (error) {
-        console.error('Forget password error:',error);
-        return res.status(500).json({ message: 'Could not send OTP.' ,error:error.message })
     }
-};
+    catch (error) {
+        res.status(500).json({
+            message: "Failed to send password reset OTP",  
+            error: error.message
+        });
+    }
+}
+
+const resetPassword = async (req, res) => {
+    try {
+        const { email, otp, newPassword ,confirmPassword} = req.body;
+        if (!email || !otp || !newPassword || !confirmPassword) {
+            return res.status(400).json({ message: "Email, OTP, new password and confirm password are required" });
+        }
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({ message: "New password and confirm password do not match" });
+        }
+        const db = getDB();
+        const userCollections = db.collection('users');
+        const normalizedEmail = email.toLowerCase();
+        const user = await userCollections.findOne({ email: normalizedEmail });
+        if (!user) {
+            return res.status(404).json({ message: "No account found with this email" });
+        }
+        if (!user.reset_password_otp_hash || !user.reset_password_otp_expires_at) {
+            return res.status(400).json({ message: "No OTP request found for this email" });
+        }
+        
+        const otpExpired = new Date() > user.reset_password_otp_expires_at;
+        if (otpExpired) {
+            return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+        }
+
+
+        const validotp = await bcrypt.compare(otp, user.reset_password_otp_hash);
+        if (!validotp) {
+            return res.status(400).json({ message: "Invalid OTP" });
+        }
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await userCollections.updateOne(
+            { _id: user._id },
+            { $set: { 
+                password: hashedPassword,
+                refreshToken: null, 
+                reset_password_otp_hash: null, 
+                reset_password_otp_expires_at: null, 
+                updated_at: new Date() 
+            }
+         }
+        );
+        res.status(200).json({ message: "Password Updated successfully. Please login with your new password" });
+    }
+    catch (error) {
+        res.status(500).json({
+            message: "Failed to reset password",
+            error: error.message
+        });
+    }
+}
 
 module.exports = {
-    sendPasswordResetOTP,
     registerUser,
     generateAccessToken,
     generateRefreshToken,
     loginUser,
-    refreshUserToken
+    refreshUserToken,
+    sendPasswordResetOTP,
+    resetPassword
 }
-

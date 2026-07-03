@@ -15,7 +15,7 @@ console.log("MAIL_SERVER:", process.env.MAIL_SERVER);
 console.log("MAIL_PORT:", process.env.MAIL_PORT);
 const transporter = nodeMailer.createTransport({
     host: process.env.MAIL_SERVICE,
-    port: (process.env.MAIL_PORT),
+    port: Number(process.env.MAIL_PORT),
     secure: false,
     auth: {
         user: process.env.MAIL_USERNAME,
@@ -46,7 +46,7 @@ const sendVerificationEmail = async (email, name, token) => {
         console.log("Sending verification mail to:", email);
 
         const verificationLink =
-            `${SERVER_URL}/api/users/verify-email/${token}`;
+            `${process.env.SERVER_URL}/api/users/verify-email/${token}`;
 
         const info = await transporter.sendMail({
             from: `"ShopMate" <${process.env.MAIL_USERNAME}>`,

@@ -32,8 +32,10 @@ const connectDB = async (retries = 5, delay = 2000) => {
       return db;
     } catch (error) {
       console.error(`❌ Connection attempt ${attempt} failed:`);
-      console.error(`   Error: ${error.message}`);
-      
+      console.error("Error name:", error.name);
+      console.error("Error code:", error.code);
+      console.error("Error cause:", error.cause);
+      console.error(error);      
       if (attempt === retries) {
         console.error('\n⚠️  Could not connect to MongoDB');
         console.error('\n💡 QUICK FIX - Start MongoDB with Docker:');
