@@ -55,6 +55,11 @@ const Navbar = () => {
                         <Link to="/logout" className='text-gray-500 hover:text-black font-medium text-sm'>
                             Logout
                         </Link>
+                         {isAdmin && (
+                            <Link to="/admin/blogs" className="text-gray-500 hover:text-black font-medium text-sm">
+                                Blog AI
+                            </Link>
+                        )}
                     </div>
                 </div>
             </div>

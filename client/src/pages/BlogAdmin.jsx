@@ -45,7 +45,7 @@ const BlogAdmin = () => {
                 { headers: getAuthHeaders() }
             );
             setTopic('');
-            navigate(`/admin/blogs/${response.data._id}/review`);
+            navigate(`/admin/blogs/${response.data.blog._id}/review`);
         } catch (error) {
             console.error('Error generating blog:', error);
             alert('Failed to generate blog');
