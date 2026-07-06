@@ -8,6 +8,9 @@ const Navbar = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const navigate = useNavigate();
 
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    const isAdmin = user && user.role === 'admin';
+
     const handleSearch = (e) => {
         e.preventDefault();
         if (searchTerm.trim()) {
@@ -55,7 +58,7 @@ const Navbar = () => {
                         <Link to="/logout" className='text-gray-500 hover:text-black font-medium text-sm'>
                             Logout
                         </Link>
-                         {isAdmin && (
+                        {isAdmin && (
                             <Link to="/admin/blogs" className="text-gray-500 hover:text-black font-medium text-sm">
                                 Blog AI
                             </Link>
