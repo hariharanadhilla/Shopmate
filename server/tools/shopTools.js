@@ -14,7 +14,7 @@ async function checkOrderStatusFunction({orderId}) {
         if(!order){
             return `No order found with id ${orderId}.`;
         }
-        const itemList=order.items.map((item)=>`${item.quatity}x${item.name}`).join(', ');
+        const itemList=order.items.map((item)=>`${item.quantity}x${item.name}`).join(', ');
         return( `Order ${order.orderId} contains: ${itemList}. Current status: ${order.status}.`);
     }
     catch(err){
@@ -36,7 +36,7 @@ const checkOrderStatusTool=tool(checkOrderStatusFunction,{
 });
 
 
-async function searchProductsFunction(query){
+async function searchProductsFunction({query}){
     try{
         const vector=await generateEmbedding(query);
         const response=await index.query({
