@@ -17,6 +17,7 @@ if (!pineconeApiKey || !pineconeIndexName) {
 
 const pinecone = new Pinecone({ apiKey: pineconeApiKey });
 const index = pinecone.index(pineconeIndexName);
+const {ChatGoogleGenerativeAI}=require("@langchain/google-genai");
 
 /*
  * Feature 1: Product Description Generation using AI
@@ -29,11 +30,17 @@ async function generateProductDescription(productName, category) {
         "Under the category: " + category + "\n" +
         "Tone: Professional yet exciting.";
     try {
-        const result = await genAI.models.generateContent(
+        /*const result = await genAI.models.generateContent(
             {
-                model: "gemini-2.5-flash",
+                model: "gemini-2.0-flash",
                 contents: prompt
-            });
+            });*/
+                const model = new ChatGoogleGenerativeAI({
+                    model: "gemini-2.5-flash",
+                    temperature: 0,
+                    maxRetries: 2,
+                });
+            const result = await model.invoke(prompt);
         return result.text;
     } catch (error) {
         console.error("Error generating product description:", error);
@@ -72,7 +79,7 @@ async function generateProductDetailsFromImage(imageBuffer, mimeType) {
     try {
         console.log(`Generating details for image. Size: ${imageBuffer.length}, Type: ${mimeType}`);
         const result = await genAI.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-2.0-flash",
             contents: [
                 {
                     role: 'user',
@@ -166,7 +173,7 @@ async function answerCustomerQuestion(question, history = []) {
         `;
 
         const result = await genAI.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-2.0-flash",
             contents: prompt
         });
 

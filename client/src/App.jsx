@@ -71,6 +71,7 @@ function AppLayout() {
                 <Route path="/" element={<Navigate to="/login" />} />
                 <Route path="/login" element={<Loginpage />} />
                 <Route path="/register" element={<Registerpage />} />
+                <Route path="/forgetPassword" element={<ForgetPasswordpage />} />
                 <Route path="/logout" element={<Logout />} />
 
                 {/* Protected: any logged-in user (admin or user) */}

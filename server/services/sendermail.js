@@ -22,31 +22,33 @@ const transporter = nodeMailer.createTransport({
         pass: process.env.MAIL_PASSWORD,
     },
 });
+let isSmtpReady = false;
 transporter.verify((error, success) => {
     if (error) {
-        console.log("SMTP ERROR:", error);
+        console.log("⚠️ SMTP verification failed. Email features will log to console.");
+        isSmtpReady = false;
     } else {
         console.log("SMTP READY");
+        isSmtpReady = true;
     }
 });
 
-// const sendVerificationEmail = async (email ,name,token) => {
-//     const verificationLink = `http://localhost:3001/api/users/verify-email/${token}`;
-//     await transporter.sendMail({
-//         from:`"ShopMate" <${process.env.MAIL_USERNAME}>`,
-//         to: email,
-//         subject: 'Email Verification',
-//         html: `<p>Hello ${name},</p>
-//                <p>Please verify your email by clicking the link below:</p>
-//                <a href="${verificationLink}">Verify Email</a>`
-//     });
-// }
 const sendVerificationEmail = async (email, name, token) => {
     try {
-        console.log("Sending verification mail to:", email);
-
         const verificationLink =
-            `${process.env.SERVER_URL}/api/users/verify-email/${token}`;
+            `${process.env.SERVER_URL || 'http://localhost:3001'}/api/users/verify-email/${token}`;
+
+        console.log("\n=========================================");
+        console.log("✉️  [LOCAL DEV] VERIFICATION EMAIL INFO:");
+        console.log(`To: ${email}`);
+        console.log(`Name: ${name}`);
+        console.log(`Link: ${verificationLink}`);
+        console.log("=========================================\n");
+
+        if (!isSmtpReady) {
+            console.log("ℹ️  Skipping real email dispatch (SMTP not configured/ready).");
+            return;
+        }
 
         const info = await transporter.sendMail({
             from: `"ShopMate" <${process.env.MAIL_USERNAME}>`,
@@ -59,21 +61,38 @@ const sendVerificationEmail = async (email, name, token) => {
             `,
         });
 
-        console.log("Mail sent:", info.messageId);
+        console.log("✅ Mail sent:", info.messageId);
     } catch (err) {
-        console.error("Mail Error:", err);
-        throw err;
+        console.error("⚠️ Mail Error during send:", err.message);
     }
 };
-const sendEmail= async({to,subject,text,html})=>{
-    await transporter.sendMail({
-        from:`"ShopMate" <${process.env.MAIL_USERNAME}>`,
-        to,
-        subject,
-        text,
-        html
-    });
-}
+
+const sendEmail = async ({ to, subject, text, html }) => {
+    try {
+        console.log("\n=========================================");
+        console.log("✉️  [LOCAL DEV] SEND EMAIL INFO:");
+        console.log(`To: ${to}`);
+        console.log(`Subject: ${subject}`);
+        if (text) console.log(`Text: ${text}`);
+        console.log("=========================================\n");
+
+        if (!isSmtpReady) {
+            console.log("ℹ️  Skipping real email dispatch (SMTP not configured/ready).");
+            return;
+        }
+
+        const info = await transporter.sendMail({
+            from: `"ShopMate" <${process.env.MAIL_USERNAME}>`,
+            to,
+            subject,
+            text,
+            html
+        });
+        console.log("✅ Mail sent:", info.messageId);
+    } catch (err) {
+        console.error("⚠️ Mail Error during send:", err.message);
+    }
+};
 
 module.exports = {
     sendVerificationEmail,
